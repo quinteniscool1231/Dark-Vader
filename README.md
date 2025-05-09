@@ -42,20 +42,7 @@ git clone https://github.com/quinteniscool1231/Dark-Vader.git
 cd Dark-Vader
 ```
 
-### 2. Create a virtual environment (optional but recommended)
-
-```
-python -m venv venv
-source venv/bin/activate
-```
-
-On Windows:
-
-```
-venv\Scripts\activate
-```
-
-### 3. Install dependencies
+### 2. Install dependencies
 
 ```
 pip install customtkinter aiohttp
