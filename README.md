@@ -8,7 +8,6 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Metrics Dashboard](#metrics-dashboard)
-- [Load Profiles](#load-profiles)
 - [Advanced Options](#advanced-options)
 - [Planned Features](#planned-features)
 
@@ -96,15 +95,6 @@ P99: 567.89 ms
 ```
 
 - Error breakdown by type
-
-## Load Profiles
-
-| Profile    | Description                                       |
-|------------|---------------------------------------------------|
-| Constant   | Fixed number of threads throughout                |
-| Ramp Up    | Gradual increase in thread count over time        |
-| Pulse      | Alternates between high and low thread levels     |
-| Random     | Random thread count per interval                  |
 
 ## Advanced Options
 
