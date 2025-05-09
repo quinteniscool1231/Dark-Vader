@@ -45,7 +45,7 @@ cd Dark-Vader
 ### 2. Install dependencies
 
 ```
-pip install customtkinter aiohttp
+pip install customtkinter aiohttp numpy
 ```
 
 ## Usage
