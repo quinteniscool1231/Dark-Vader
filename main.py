@@ -118,6 +118,7 @@ class StressTester:
     def setup_variables(self):
         self.url_var = ctk.StringVar()
         self.num_threads_var = ctk.IntVar(value=200)
+        self.config_name_var = ctk.StringVar()
         self.request_delay_var = ctk.StringVar(value="0")
         self.payload_size_var = ctk.IntVar(value=5000000)
         self.request_timeout_var = ctk.IntVar(value=30)
@@ -190,6 +191,15 @@ class StressTester:
 
     def create_settings_tab(self):
         settings_tab = self.tabview.add("Settings")
+
+        # Configuration management frame
+        config_frame = ctk.CTkFrame(settings_tab)
+        config_frame.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(config_frame, text="Configuration Name:").pack(side="left", padx=5)
+        ctk.CTkEntry(config_frame, textvariable=self.config_name_var).pack(side="left", padx=5)
+        ctk.CTkButton(config_frame, text="Save Config", command=self.save_config).pack(side="left", padx=5)
+        ctk.CTkButton(config_frame, text="Load Config", command=self.load_config).pack(side="left", padx=5)
 
         settings_tabview = ctk.CTkTabview(settings_tab)
         settings_tabview.pack(fill="both", expand=True, padx=10, pady=10)
@@ -264,8 +274,72 @@ class StressTester:
 
     def create_metrics_tab(self):
         metrics_tab = self.tabview.add("Metrics")
-        self.metrics_display = ctk.CTkTextbox(metrics_tab, height=400)
-        self.metrics_display.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # Top frame for metrics display
+        top_frame = ctk.CTkFrame(metrics_tab)
+        top_frame.pack(fill="x", padx=10, pady=5)
+
+        self.metrics_display = ctk.CTkTextbox(top_frame, height=300)
+        self.metrics_display.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Bottom frame for export buttons and graph
+        bottom_frame = ctk.CTkFrame(metrics_tab)
+        bottom_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        export_frame = ctk.CTkFrame(bottom_frame)
+        export_frame.pack(fill="x", padx=5, pady=5)
+
+        ctk.CTkButton(export_frame, text="Export CSV", command=lambda: self.export_metrics("csv")).pack(side="left", padx=5)
+        ctk.CTkButton(export_frame, text="Export JSON", command=lambda: self.export_metrics("json")).pack(side="left", padx=5)
+
+        self.fig_canvas = None
+        self.update_graph()
+
+    def export_metrics(self, format_type):
+        import pandas as pd
+        import json
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data = {
+            'response_times': list(self.metrics.response_times),
+            'success_count': self.metrics.success_count,
+            'error_count': self.metrics.error_count,
+            'percentiles': self.metrics.get_percentiles(),
+            'error_types': self.metrics.error_types
+        }
+
+        if format_type == "csv":
+            df = pd.DataFrame(data['response_times'], columns=['response_time'])
+            df.to_csv(f'metrics_{timestamp}.csv', index=False)
+        else:
+            with open(f'metrics_{timestamp}.json', 'w') as f:
+                json.dump(data, f, indent=2)
+
+        self.log_message(f"Metrics exported to metrics_{timestamp}.{format_type}")
+
+    def update_graph(self):
+        if not hasattr(self, 'fig_canvas'):
+            return
+
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+        if self.metrics.response_times:
+            if self.fig_canvas:
+                self.fig_canvas.get_tk_widget().destroy()
+
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.hist(self.metrics.response_times, bins=50, color='blue', alpha=0.7)
+            ax.set_title('Response Time Distribution')
+            ax.set_xlabel('Response Time (s)')
+            ax.set_ylabel('Frequency')
+
+            self.fig_canvas = FigureCanvasTkAgg(fig, master=self.metrics_tab)
+            self.fig_canvas.draw()
+            self.fig_canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+
+        self.root.after(1000, self.update_graph)
 
     def create_advanced_tab(self):
         advanced_tab = self.tabview.add("Advanced")
@@ -346,7 +420,6 @@ class StressTester:
                     self.metrics.add_response_time(response_time)
                     if response.status < 400:
                         self.metrics.success_count += 1
-                        return
                     else:
                         error_msg = f"HTTP {response.status}: {response.reason}"
                         self.metrics.add_error(error_msg)
@@ -361,6 +434,70 @@ class StressTester:
                     await asyncio.sleep(retry_delay)
                     continue
                 break
+
+    def save_config(self):
+        try:
+            if not self.config_name_var.get().strip():
+                messagebox.showerror("Error", "Please enter a configuration name")
+                return
+
+            config = {
+                'url': self.url_var.get(),
+                'num_threads': self.num_threads_var.get(),
+                'request_delay': self.request_delay_var.get(),
+                'payload_size': self.payload_size_var.get(),
+                'request_timeout': self.request_timeout_var.get(),
+                'request_method': self.request_method_var.get(),
+                'load_profile': self.load_profile_var.get(),
+                'headers': self.headers_text.get("1.0", "end").strip(),
+                'cookies': self.cookies_text.get("1.0", "end").strip(),
+                'retry_count': self.retry_count_var.get(),
+                'retry_delay': self.retry_delay_var.get(),
+                'pool_size': self.pool_size_var.get(),
+                'keep_alive': self.keep_alive_var.get()
+            }
+
+            filename = f"config_{self.config_name_var.get()}.json"
+            with open(filename, 'w') as f:
+                json.dump(config, f, indent=2)
+            self.log_message(f"Configuration saved to {filename}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save configuration: {str(e)}")
+
+    def load_config(self):
+        filename = filedialog.askopenfilename(
+            filetypes=[("JSON files", "*.json")],
+            initialdir="."
+        )
+        if not filename:
+            return
+
+        try:
+            with open(filename, 'r') as f:
+                config = json.load(f)
+
+            self.url_var.set(config.get('url', ''))
+            self.num_threads_var.set(config.get('num_threads', 200))
+            self.request_delay_var.set(config.get('request_delay', '0'))
+            self.payload_size_var.set(config.get('payload_size', 5000000))
+            self.request_timeout_var.set(config.get('request_timeout', 30))
+            self.request_method_var.set(config.get('request_method', 'POST'))
+            self.load_profile_var.set(config.get('load_profile', LoadProfile.CONSTANT))
+
+            self.headers_text.delete("1.0", "end")
+            self.headers_text.insert("1.0", config.get('headers', ''))
+
+            self.cookies_text.delete("1.0", "end")
+            self.cookies_text.insert("1.0", config.get('cookies', ''))
+
+            self.retry_count_var.set(config.get('retry_count', 3))
+            self.retry_delay_var.set(config.get('retry_delay', 1.0))
+            self.pool_size_var.set(config.get('pool_size', 100))
+            self.keep_alive_var.set(config.get('keep_alive', 300))
+
+            self.log_message(f"Configuration loaded from {filename}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load configuration: {str(e)}")
 
     async def worker(self, url):
         conn = aiohttp.TCPConnector(
@@ -442,9 +579,16 @@ class StressTester:
 
     def stop_stress_test(self):
         self.stress_test_running = False
-        self.status_label.configure(text="Status: Stopped")
-        self.start_button.configure(state="normal")
-        self.stop_button.configure(state="disabled")
+        self.status_label.configure(text="Status: Stopping...")
+        
+        def complete_stop():
+            self.status_label.configure(text="Status: Stopped")
+            self.start_button.configure(state="normal")
+            self.stop_button.configure(state="disabled")
+            self.log_message("Stress test stopped")
+            
+        # Give workers time to clean up
+        self.root.after(1000, complete_stop)
 
     def apply_settings(self, *args):
         try:
