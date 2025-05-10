@@ -1,30 +1,33 @@
 # Dark Vader
 
-> A powerful GUI-based HTTP stress testing tool with real-time metrics and customization options, built in Python with `customtkinter`.
+> A powerful GUI and CLI-based HTTP stress testing tool built with Python and `customtkinter`, designed for visibility, customization, and performance diagnostics.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
+- [Usage (GUI)](#usage-gui)
+- [CLI Usage](#cli-usage)
 - [Main Functions](#main-functions)
 - [Metrics Dashboard](#metrics-dashboard)
 - [Planned Features](#planned-features)
 - [License](#license)
 
+---
+
 ## Features
 
-- 🖥️ Graphical user interface (GUI) using `customtkinter`
-- 🔁 Asynchronous request handling via `aiohttp` and `asyncio`
-- ⚙️ Configurable test parameters:
-  - URL, method (`GET`, `POST`, `PUT`, `DELETE`)
-  - Threads (1–1000), delay, timeout
-  - Payload size (up to 10MB)
-- 📊 Real-time metrics: requests/sec, avg response time, success rate, error types
-- 🎯 Load profiles: constant, ramp-up, pulse, random
-- 🎨 Customizable UI: theme mode, color theme, font size, opacity
-- 📁 Save/load configurations and export metrics as CSV/JSON
-- 📈 Built-in histogram graph of response times
+- 🖥️ **GUI** with `customtkinter`
+- 🔁 Async request handling (`aiohttp`, `asyncio`)
+- ⚙️ Full test config: URL, method, threads, delay, timeout, payload
+- 🧠 **Load Profiles**: constant, ramp-up, pulse, random
+- 📊 **Real-time metrics**: success rate, req/s, error types, percentiles
+- 🧪 Live logs and stats dashboard
+- 🎨 Appearance settings (theme, font, opacity)
+- 💾 Config save/load + metrics export (JSON/CSV)
+- 🧵 CLI mode with graceful exit and progress bar
+
+---
 
 ## Installation
 
@@ -35,7 +38,7 @@ git clone https://github.com/quinteniscool1231/Dark-Vader.git
 cd Dark-Vader
 ```
 
-### 2. Create a Virtual Environment (optional but recommended)
+### 2. Create a Virtual Environment (optional)
 
 ```bash
 python -m venv venv
@@ -48,94 +51,140 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
-> Or manually:
+If `requirements.txt` is missing, manually install:
 
 ```bash
-pip install customtkinter aiohttp numpy pandas matplotlib
+pip install customtkinter aiohttp numpy pandas matplotlib validators
 ```
 
-## Usage
+---
 
-To launch the GUI:
+## Usage (GUI)
+
+Launch the GUI app:
 
 ```bash
 python main.py
 ```
 
-### Configuration Steps
+### Setup in GUI
 
-1. Input **target URL**
-2. Choose **HTTP method**
-3. Adjust **threads**, **delay**, **timeout**, and **payload**
-4. Optionally customize:
-   - Load profile (e.g., ramp-up)
-   - Theme, font, opacity
-   - Headers, cookies, retry policy
+1. Enter target **URL**
+2. Choose HTTP **method** (`GET`, `POST`, `PUT`, etc.)
+3. Set **threads**, **delay**, **payload**, **timeout**
+4. Choose load profile + optional UI theme
 5. Click **Start Test**
-6. Monitor logs and metrics live
-7. Export metrics or save configuration
+6. Monitor live logs, charts, and metrics
+7. Click **Stop Test** and export results
 
-## Main Functions
+---
 
-| Function | Description |
-|---------|-------------|
-| `StressTestMetrics` | Stores and calculates performance statistics including percentiles and error breakdown |
-| `StressTester` | Main class that initializes UI, handles configuration, and manages request threads |
-| `make_request()` | Async function that performs HTTP requests with retry and error handling |
-| `worker()` | Background coroutine that repeatedly sends requests based on delay and load profile |
-| `run_async_loop()` | Controls the async event loop and worker thread count |
-| `export_metrics()` | Exports metrics data to `.csv` or `.json` |
-| `save_config()` / `load_config()` | Saves or loads test settings from local JSON file |
-| `apply_settings()` | Applies theme, font size, and opacity to GUI |
-| `update_graph()` | Draws a histogram of response times using matplotlib |
-| `update_metrics_display()` | Refreshes the live metrics tab continuously |
+## CLI Usage
 
-## Metrics Dashboard
+Dark Vader includes a fully featured CLI for automated or headless stress testing with validation, progress bar, and metrics export.
 
-Metrics panel updates every second and includes:
+### Run the CLI
 
-- **Requests/sec** – Request throughput
-- **Avg Response Time** – Average time in ms
-- **Success Rate** – %
-- **Total Requests** – Number sent
-- **Errors & Error Types** – Counted and grouped
-- **Percentiles** – P50, P75, P90, P95, P99 response times
-
-Example Output:
-
+```bash
+python cli.py https://example.com \
+  --threads 300 \
+  --duration 60 \
+  --method POST \
+  --payload-size 1000000 \
+  --delay 0.1 \
+  --timeout 15 \
+  --pool-size 200 \
+  --output results/output.json
 ```
+
+> Press `Ctrl+C` to stop gracefully at any time.
+
+### CLI Arguments
+
+| Argument          | Description                                           | Default    |
+|-------------------|-------------------------------------------------------|------------|
+| `url` (positional)| The target URL to test                               | *required* |
+| `--threads`       | Number of concurrent threads/workers (positive int)  | `200`      |
+| `--duration`      | Test duration in seconds                             | `60`       |
+| `--method`        | HTTP method: `GET`, `POST`, `PUT`, etc.              | `POST`     |
+| `--payload-size`  | Payload size in bytes                                | `5000000`  |
+| `--delay`         | Delay between requests (seconds)                     | `0`        |
+| `--timeout`       | Timeout for each request in seconds                  | `30`       |
+| `--pool-size`     | Max number of open connections                       | `100`      |
+| `--output`        | Path to JSON output file for metrics                 | *None*     |
+
+### Output Example
+
+```text
+Progress: [==========----------------------------] 15/60s | Requests: 1324 | Success Rate: 98.2%
+...
+Test completed successfully
+
 Performance Metrics:
 ==================
-Requests/sec: 164.75
-Avg Response Time: 148.21ms
-Success Rate: 96.3%
-Total Requests: 2457
-Successes: 2366
-Errors: 91
+Requests/sec: 147.12
+Avg Response Time: 189.53ms
+Success Rate: 98.7%
+Total Requests: 8827
+Successes: 8711
+Errors: 116
 
 Response Time Percentiles:
 =======================
-P50: 141.31ms
-P75: 176.90ms
-P90: 224.88ms
-P95: 268.34ms
-P99: 390.20ms
+P50: 182.34ms
+P75: 210.87ms
+P90: 258.67ms
+P95: 315.33ms
+P99: 408.98ms
 
 Error Breakdown:
 ==============
-TimeoutError: 55
-ClientOSError: 24
-HTTP 500: 12
+TimeoutError: 65
+HTTP 500: 51
 ```
+
+> If `--output` is used, results are exported to JSON automatically.
+
+---
+
+## Main Functions
+
+| Function                     | Purpose                                                              |
+|-----------------------------|----------------------------------------------------------------------|
+| `StressTestMetrics`         | Collects and summarizes performance metrics                         |
+| `LoadProfile.get_thread_count()` | Calculates dynamic thread count based on profile type       |
+| `make_request()` (GUI)      | Sends requests and logs responses/errors                            |
+| `run_stress_test()` (CLI)   | Manages workers, async loop, metrics, and progress bar              |
+| `save_config()` / `load_config()` | Stores/loads full test setups as JSON                    |
+| `export_metrics()`          | Exports logs and stats to `.csv` or `.json`                         |
+| `apply_settings()`          | Applies appearance preferences                                      |
+
+---
+
+## Metrics Dashboard
+
+Both GUI and CLI collect:
+
+- 🔄 **Requests/sec** – Throughput
+- 🕒 **Avg Response Time** – Mean duration per request
+- ✅ **Success Rate** – Ratio of successful responses
+- 🧮 **Total Requests** – Combined successes + errors
+- ⚠️ **Error Breakdown** – Grouped by type/status
+- 📈 **Response Time Percentiles** – P50, P75, P90, P95, P99
+
+---
 
 ## Planned Features
 
-- [ ] Full CLI (command-line interface) support
-- [ ] Save/load test run history
-- [ ] Customizable request bodies (not just JSON)
-- [ ] More advanced error visualization
-- [ ] Distributed stress testing support
+- [ ] Custom request body editing (raw or JSON)
+- [ ] CLI config file loading
+- [ ] Response validation and logging
+- [ ] Real-time response content viewer
+- [ ] Headless batch mode (e.g. multiple targets)
+- [ ] Dockerized version for deployments
+
+---
 
 ## License
 
-MIT License. See the [LICENSE](LICENSE) file for full terms.
+GNU License. See [LICENSE](LICENSE) for full terms.
