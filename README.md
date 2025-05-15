@@ -48,12 +48,6 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 ### 3. Install Dependencies
 
 ```bash
-pip install -r requirements.txt
-```
-
-If `requirements.txt` is missing, manually install:
-
-```bash
 pip install customtkinter aiohttp numpy pandas matplotlib validators
 ```
 
